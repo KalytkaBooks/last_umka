@@ -17,20 +17,26 @@
             justify-content: center;
             height: 100vh;
         }
+        h2 { margin-bottom: 15px; font-size: 18px; text-align: center;}
+        
         video {
             width: 95%;
             max-height: 60vh;
             border-radius: 12px;
             background: #000;
             box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            outline: none;
         }
+        
         .controls {
             margin-top: 25px;
             display: grid;
             grid-template-columns: repeat(3, 1fr); /* 3 кнопки в ряд */
             gap: 10px;
             width: 90%;
+            max-width: 400px;
         }
+        
         button {
             background: var(--tg-theme-button-color, #3390ec);
             color: var(--tg-theme-button-text-color, #ffffff);
@@ -40,50 +46,59 @@
             font-size: 14px;
             font-weight: 600;
             cursor: pointer;
-            opacity: 0.6; /* По умолчанию полупрозрачные */
+            opacity: 0.5; /* По умолчанию полупрозрачные */
             transition: 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
         }
+        
         /* Стиль для активной кнопки языка */
         button.active {
             opacity: 1;
             transform: scale(1.05);
-            box-shadow: 0 0 10px var(--tg-theme-button-color);
+            box-shadow: 0 0 12px rgba(51, 144, 236, 0.4);
+            border: 1px solid rgba(255,255,255,0.2);
         }
-        h2 { margin-bottom: 10px; font-size: 18px; }
+        
+        button:active { transform: scale(0.95); }
     </style>
 </head>
 <body>
 
-    <h2 id="title">Загрузка...</h2>
+    <h2 id="title">Загрузка урока...</h2>
 
     <video id="mainVideo" controls playsinline>
         <source src="" type="video/mp4">
+        Ваш браузер не поддерживает видео.
     </video>
 
     <div class="controls">
         <button onclick="changeLang('ru')" id="btn-ru">🇷🇺 RU</button>
         <button onclick="changeLang('en')" id="btn-en">🇬🇧 EN</button>
+        <button onclick="changeLang('zh')" id="btn-zh">🇨🇳 CN</button>
         <button onclick="changeLang('es')" id="btn-es">🇪🇸 ES</button>
+        <button onclick="changeLang('ar')" id="btn-ar">🇸🇦 AR</button>
+        <button onclick="changeLang('fr')" id="btn-fr">🇫🇷 FR</button>
     </div>
 
     <script>
+        // Инициализация WebApp
         const tg = window.Telegram.WebApp;
         tg.expand(); 
+        tg.ready();
 
-        // --- БАЗА ДАННЫХ ВАШИХ ВИДЕО (ДРОПБОКС) ---
-        // Вставляйте сюда ссылки с raw=1
+        // --- БАЗА ДАННЫХ ВИДЕО (ДРОПБОКС) ---
         const videoDatabase = {
             "1": { // Урок 1
                 "title": "Урок 1: Введение",
-                "ru": "https://www.dropbox.com/s/YOUR_LINK_RU?raw=1", 
-                "en": "https://www.dropbox.com/s/YOUR_LINK_EN?raw=1",
-                "es": "https://www.dropbox.com/s/YOUR_LINK_ES?raw=1"
-            },
-            "2": { // Урок 2
-                "title": "Урок 2: Сборка",
-                "ru": "https://www.dropbox.com/s/ANOTHER_LINK_RU?raw=1",
-                "en": "https://www.dropbox.com/s/ANOTHER_LINK_EN?raw=1",
-                "es": "https://www.dropbox.com/s/ANOTHER_LINK_ES?raw=1"
+                "ru": "https://www.dropbox.com/scl/fi/tiw8ntae3p1ssgez6nd5l/.mp4?rlkey=ca00xxur89xm6tascgutp20ek&st=7sf8nj6e&raw=1",
+                "en": "https://www.dropbox.com/scl/fi/myothlxdqlzdugoxougz1/video_en.mp4?rlkey=26u1y9fd25hz5poz2cfj3cb5i&st=lo3ustpc&raw=1",
+                "zh": "https://www.dropbox.com/scl/fi/bmygahd2zs2czm6c3tued/video_zh.mp4?rlkey=2ur9msttc4zrg2i3r18bygn58&st=5705nucc&raw=1",
+                "es": "https://www.dropbox.com/scl/fi/s1w3f9d149ow2xm54qnne/video_es.mp4?rlkey=rsy7mlk705w02xc0h9k2kxsbc&st=cds5j2jz&raw=1",
+                "ar": "https://www.dropbox.com/scl/fi/11jswagqz75ypk79kegi9/video_ar.mp4?rlkey=ofwlr5izo86x0sjjk9o3jipc4&st=6mxhddx0&raw=1",
+                "fr": "https://www.dropbox.com/scl/fi/za8ft7tavwojgt6cotwyt/video_fr.mp4?rlkey=c4nfd3e1v2sr7ra7h746m809l&st=pnnykw1h&raw=1"
             }
         };
 
@@ -95,9 +110,11 @@
         const currentLesson = videoDatabase[lessonId];
         const videoElement = document.getElementById('mainVideo');
         
-        // Ставим заголовок
+        // Если урок найден, ставим заголовок
         if(currentLesson) {
             document.getElementById('title').innerText = currentLesson.title;
+        } else {
+            document.getElementById('title').innerText = "Урок не найден";
         }
 
         // Функция смены языка
@@ -105,21 +122,32 @@
             if (!currentLesson) return;
 
             const newSrc = currentLesson[lang];
+            
+            // Если ссылка не найдена (мало ли), ничего не делаем
+            if (!newSrc) return;
+
+            // Запоминаем текущее время и статус воспроизведения
             const currentTime = videoElement.currentTime;
-            const wasPlaying = !videoElement.paused;
+            const wasPlaying = !videoElement.paused && !videoElement.ended && videoElement.readyState > 2;
 
             videoElement.src = newSrc;
             
-            // Восстанавливаем время просмотра
-            videoElement.currentTime = currentTime;
-            if (wasPlaying) videoElement.play();
+            // Пытаемся восстановить время
+            // Небольшой таймаут нужен для стабильности на iOS
+            videoElement.onloadedmetadata = function() {
+                videoElement.currentTime = currentTime;
+                if (wasPlaying) {
+                    videoElement.play().catch(e => console.log("Auto-play prevented"));
+                }
+            };
 
-            // Визуал кнопок
+            // Визуальное обновление кнопок
             document.querySelectorAll('button').forEach(b => b.classList.remove('active'));
-            document.getElementById(`btn-${lang}`).classList.add('active');
+            const activeBtn = document.getElementById(`btn-${lang}`);
+            if(activeBtn) activeBtn.classList.add('active');
         }
 
-        // Запуск по умолчанию (Русский)
+        // Запуск по умолчанию: Русский язык
         changeLang('ru');
 
     </script>
